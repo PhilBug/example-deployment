@@ -1,0 +1,9 @@
+---
+domain_name: kwkp.tk
+certbot_email: example-webserver@triots.com
+
+apt_packages:
+  - curl
+  - wget
+  - tree
+  - htop

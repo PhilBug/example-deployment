@@ -1,0 +1,63 @@
+---
+- hosts: all
+  gather_facts: true
+  become: true
+
+  tasks:
+    - name: Include all variables
+      ansible.builtin.include_vars:
+        dir: vars
+
+    - name: Set timezone to Warsaw
+      community.general.timezone:
+        name: Europe/Warsaw
+
+    - name: Install pip
+      ansible.builtin.include_role:
+        name: geerlingguy.pip
+      tags: provisioning
+
+    - name: Install list of packages
+      ansible.builtin.apt:
+        name: "{{ apt_packages }}"
+        state: present
+        update_cache: true
+
+    - name: Install docker
+      ansible.builtin.include_role:
+        name: geerlingguy.docker
+      tags: provisioning
+
+    - name: Allow all access to tcp port 22
+      community.general.ufw:
+        rule: allow
+        name: OpenSSH
+
+    - name: Allow all access to tcp port 80
+      community.general.ufw:
+        rule: allow
+        port: "80"
+        proto: tcp
+
+    - name: Allow all access to tcp port 443
+      community.general.ufw:
+        rule: allow
+        port: "443"
+        proto: tcp
+
+    - name: Install snap packages
+      community.general.snap:
+        name: certbot
+        classic: true
+
+    - name: Generate https certificate
+      ansible.builtin.command: certbot certonly --standalone -d {{ domain_name }} --email {{ certbot_email }} --agree-tos --noninteractive
+      args:
+        creates: /etc/letsencrypt/live/{{ domain_name }}/fullchain.pem
+
+    - name: Generate merged certificate
+      ansible.builtin.shell: |
+        cat fullchain.pem privkey.pem > fullchain-priv.pem
+      args:
+        chdir: /etc/letsencrypt/live/{{ domain_name }}/
+        creates: fullchain-priv.pem

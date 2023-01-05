@@ -1,0 +1,26 @@
+version: "3"
+
+services:
+  haproxy:
+    image: haproxy:2.7.1-alpine
+    container_name: haproxy
+    user: root
+    restart: unless-stopped
+    ports:
+    - 80:80
+    - 443:443
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/letsencrypt/:/etc/letsencrypt/
+      - ./docker/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg
+
+  nginx1:
+    container_name: nginx1
+    restart: unless-stopped
+    image: philbug/nginx-helloworld:latest
+
+  nginx2:
+    container_name: nginx2
+    restart: unless-stopped
+    image: philbug/nginx-helloworld:latest

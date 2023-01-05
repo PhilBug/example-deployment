@@ -1,0 +1,48 @@
+name: Build and deploy example webapp
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_LOGIN }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push docker image
+        uses: docker/build-push-action@v3
+        with:
+          context: ./docker/nginx
+          file: ./docker/nginx/Dockerfile
+          push: true
+          tags: philbug/nginx-helloworld:latest
+
+  deploy:
+    runs-on: ubuntu-22.04
+    needs: build
+    steps:
+      - name: Deploy application via ssh
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: kwkp.tk
+          username: ubuntu
+          key: ${{ secrets.SSH_KEY }}
+          port: 22
+          script: |
+            git -C example-deployment reset --hard origin/main && \
+            git -C example-deployment pull origin main || \
+            git clone -b main https://philbug:${{ secrets.REPO_TOKEN }}@github.com/PhilBug/example-deployment.git;
+
+            cd example-deployment && \
+            docker-compose pull && \
+            docker-compose up -d && \
+            docker kill -s HUP haproxy
